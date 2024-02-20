@@ -91,6 +91,7 @@ enum PriestSpells
     SPELL_PRIEST_ESSENCE_DEVOURER                   = 415479,
     SPELL_PRIEST_ESSENCE_DEVOURER_SHADOWFIEND_HEAL  = 415673,
     SPELL_PRIEST_ESSENCE_DEVOURER_MINDBENDER_HEAL   = 415676,
+    SPELL_PRIEST_EXPIATION                          = 390832,
     SPELL_PRIEST_FLASH_HEAL                         = 2061,
     SPELL_PRIEST_FROM_DARKNESS_COMES_LIGHT_AURA     = 390617,
     SPELL_PRIEST_GREATER_HEAL                       = 289666,
@@ -129,6 +130,7 @@ enum PriestSpells
     SPELL_PRIEST_MINDGAMES                          = 375901,
     SPELL_PRIEST_MINDGAMES_VENTHYR                  = 323673,
     SPELL_PRIEST_MIND_BOMB_STUN                     = 226943,
+    SPELL_PRIEST_MIND_BLAST                         = 8092,
     SPELL_PRIEST_ORACULAR_HEAL                      = 26170,
     SPELL_PRIEST_PENANCE                            = 47540,
     SPELL_PRIEST_PENANCE_CHANNEL_DAMAGE             = 47758,
@@ -1246,6 +1248,52 @@ class spell_pri_evangelism : public SpellScript
     {
         OnEffectHitTarget += SpellEffectFn(spell_pri_evangelism::HandleScriptEffect, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
     }
+};
+
+// 390832 - Expiation
+// Triggered by 8092 - Mind Blast and 32379 - Shadow Word: Death
+class spell_pri_expiation : public SpellScript
+{
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo
+        ({
+            SPELL_PRIEST_MIND_BLAST,
+            SPELL_PRIEST_SHADOW_WORD_DEATH,
+            SPELL_PRIEST_SHADOW_WORD_PAIN,
+            SPELL_PRIEST_PURGE_THE_WICKED_PERIODIC
+        }) && ValidateSpellEffect({ {SPELL_PRIEST_EXPIATION, EFFECT_1 } });
+    }
+
+    bool Load() override
+    {
+        if (GetCaster()->HasAura(SPELL_PRIEST_PURGE_THE_WICKED))
+            _dot = SPELL_PRIEST_PURGE_THE_WICKED_PERIODIC;
+
+        return true;
+    }
+
+    void HandleHit()
+    {
+        if (GetCaster()->HasAura(SPELL_PRIEST_EXPIATION))
+        {
+            Aura* appliedDot = GetHitUnit()->GetAura(_dot);
+            if (!appliedDot)
+                return;
+
+            int8 bp = GetCaster()->GetAuraEffect(SPELL_PRIEST_EXPIATION, EFFECT_1)->GetAmount();
+            int8 duration = Seconds(appliedDot->GetDuration()).count();
+            appliedDot->SetDuration(duration - bp);
+        }
+    }
+
+    void Register() override
+    {
+        OnHit += SpellHitFn(spell_pri_expiation::HandleHit);
+    }
+
+private:
+    int32 _dot = SPELL_PRIEST_SHADOW_WORD_PAIN;
 };
 
 // 33110 - Prayer of Mending (Heal)
@@ -3191,6 +3239,7 @@ void AddSC_priest_spell_scripts()
     RegisterSpellScript(spell_pri_epiphany);
     RegisterSpellScript(spell_pri_essence_devourer_heal);
     RegisterSpellScript(spell_pri_evangelism);
+    RegisterSpellScript(spell_pri_expiation);
     RegisterSpellScript(spell_pri_focused_mending);
     RegisterSpellScript(spell_pri_from_darkness_comes_light);
     RegisterSpellScript(spell_pri_guardian_spirit);
