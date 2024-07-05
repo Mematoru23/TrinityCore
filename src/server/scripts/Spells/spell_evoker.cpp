@@ -56,7 +56,9 @@ enum EvokerSpells
     SPELL_EVOKER_PERMEATING_CHILL_TALENT        = 370897,
     SPELL_EVOKER_PYRE_DAMAGE                    = 357212,
     SPELL_EVOKER_SCOURING_FLAME                 = 378438,
-    SPELL_EVOKER_SOAR_RACIAL                    = 369536
+    SPELL_EVOKER_SOAR_RACIAL                    = 369536,
+    SPELL_EVOKER_VERDANT_EMBRACE                = 360995,
+    SPELL_EVOKER_VERDANT_EMBRACE_HEAL           = 361195,
 };
 
 enum EvokerSpellLabels
@@ -363,6 +365,38 @@ class spell_evo_scouring_flame : public SpellScript
     }
 };
 
+// 360995 - Verdant Embrace (Green)
+class spell_evo_verdant_embrace : public SpellScript
+{
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        return ValidateSpellInfo({ SPELL_EVOKER_VERDANT_EMBRACE_HEAL });
+    }
+
+    void HandleEffectHitTarget(SpellEffIndex /*effIndex*/)
+    {
+        if (GetHitUnit() == GetCaster())
+        {
+            GetCaster()->CastSpell(GetCaster(), SPELL_EVOKER_VERDANT_EMBRACE_HEAL);
+        }
+        else
+        {
+            Position dest = GetHitDest()->GetPosition();
+
+            SpellCastTargets target;
+            target.SetDst(dest);
+            target.SetUnitTarget(GetHitUnit());
+            GetCaster()->CastSpell(std::move(target), GetEffectValue(), GetCastDifficulty());
+            GetCaster()->CastSpell(GetHitUnit(), SPELL_EVOKER_VERDANT_EMBRACE_HEAL);
+        }
+    }
+
+    void Register() override
+    {
+        OnEffectHitTarget += SpellEffectFn(spell_evo_verdant_embrace::HandleEffectHitTarget, EFFECT_0, SPELL_EFFECT_DUMMY);
+    }
+};
+
 void AddSC_evoker_spell_scripts()
 {
     RegisterSpellScript(spell_evo_azure_strike);
@@ -375,4 +409,5 @@ void AddSC_evoker_spell_scripts()
     RegisterSpellScript(spell_evo_permeating_chill);
     RegisterSpellScript(spell_evo_pyre);
     RegisterSpellScript(spell_evo_scouring_flame);
+    RegisterSpellScript(spell_evo_verdant_embrace);
 }
